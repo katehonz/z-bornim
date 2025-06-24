@@ -1,6 +1,6 @@
-# Z-Bornim - Enhanced Ormnin ORM for Nim
-# Z-Bornim - Подобрена Ormnin ORM за Nim
-# Z-Bornim - Улучшенная Ormnin ORM для Nim
+# Z-Bornim - Enhanced Ormin ORM for Nim
+# Z-Bornim - Подобрена Ormin ORM за Nim
+# Z-Bornim - Улучшенная Ormin ORM для Nim
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Nim](https://img.shields.io/badge/nim-2.0+-yellow.svg)](https://nim-lang.org)
