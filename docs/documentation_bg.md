@@ -143,22 +143,163 @@ createModels()
 
 ### Използване на транзакции
 
-С новата поддръжка на транзакции, можете да изпълнявате множество заявки в една транзакция:
+С новата разширена поддръжка на транзакции, можете да изпълнявате множество заявки в една транзакция с пълен контрол и мониторинг:
+
+#### Основно използване на транзакции
 
 ```nim
 import ormin/transactions
 
-# Използване на шаблона withTransaction
-withTransaction(db):
-  query:
-    insert user(username = ?user.username)
+# Метод 1: Ръчно управление на транзакции
+let tx = newTransaction(db)
+try:
+  tx.begin()
   
-  query:
-    insert message(username = ?user.username, content = ?content)
+  # Вашите операции с базата данни
+  db.exec(sql"INSERT INTO users (name, email) VALUES (?, ?)", "John", "john@example.com")
+  tx.incrementOperationCount()
+  
+  db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "1", "My Post")
+  tx.incrementOperationCount()
+  
+  tx.commit()
+  echo "Транзакцията е потвърдена успешно"
+except:
+  if tx.isActive():
+    tx.rollback()
+  raise
 
-# Или използвайте по-краткия синтаксис
+# Метод 2: Използване на шаблона withTransaction (препоръчително)
+withTransaction(db):
+  # Вашите операции с базата данни
+  db.exec(sql"INSERT INTO users (name, email) VALUES (?, ?)", "Jane", "jane@example.com")
+  db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "2", "Jane's Post")
+  # Автоматично потвърждава при успех или отменя при грешка
+
+# Метод 3: Кратък синтаксис
 transaction(db):
   # Вашите заявки тук
+```
+
+#### Нива на изолация на транзакции
+
+```nim
+# Използване на различни нива на изолация
+transactionWithIsolation(db, tilSerializable):
+  # Операции с най-високо ниво на изолация
+  db.exec(sql"SELECT COUNT(*) FROM users")
+
+transactionWithIsolation(db, tilReadCommitted):
+  # Операции с READ COMMITTED изолация
+  db.exec(sql"SELECT * FROM posts")
+
+# Създаване на транзакция с определено ниво на изолация
+let tx = newTransaction(db, isolationLevel = tilRepeatableRead)
+```
+
+#### Вложени транзакции със Savepoints
+
+```nim
+let tx = newTransaction(db)
+try:
+  tx.begin()
+  
+  # Основни операции
+  db.exec(sql"INSERT INTO users (name) VALUES (?)", "Alice")
+  
+  # Създаване на savepoint
+  tx.createSavepoint("user_created")
+  
+  try:
+    # Рискови операции
+    db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "999", "Invalid")
+  except:
+    # Връщане към savepoint при грешка
+    tx.rollbackToSavepoint("user_created")
+    echo "Върнахме се към savepoint"
+  
+  # Продължаване с валидни операции
+  db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "1", "Valid Post")
+  
+  # Освобождаване на savepoint
+  tx.releaseSavepoint("user_created")
+  
+  tx.commit()
+except:
+  if tx.isActive():
+    tx.rollback()
+  raise
+```
+
+#### Автоматичен повторен опит при Deadlock
+
+```nim
+# Автоматичен повторен опит при deadlock (до 3 пъти)
+withTransactionRetry(db, 3):
+  # Операции, които могат да причинят deadlock
+  db.exec(sql"UPDATE users SET email = ? WHERE id = ?", "new@example.com", "1")
+  db.exec(sql"UPDATE posts SET title = ? WHERE user_id = ?", "New Title", "1")
+```
+
+#### Статистики и мониторинг на транзакции
+
+```nim
+let tx = newTransaction(db)
+try:
+  tx.begin()
+  
+  # Изпълнение на операции
+  for i in 1..10:
+    db.exec(sql"INSERT INTO test (value) VALUES (?)", $i)
+    tx.incrementOperationCount()
+  
+  tx.commit()
+  
+  # Получаване на статистики
+  let stats = tx.getTransactionStats()
+  echo "Брой операции: ", stats.operationCount
+  echo "Продължителност: ", tx.getDuration()
+  echo "Брой отмени: ", stats.rollbackCount
+  
+except:
+  if tx.isActive():
+    tx.rollback()
+  raise
+
+# Мониторинг на активни транзакции
+let activeTx = getActiveTransactions()
+echo "Активни транзакции: ", activeTx.len
+
+# Почистване на неактивни транзакции
+cleanupInactiveTransactions()
+```
+
+#### Опции за създаване на транзакции
+
+```nim
+# Създаване на транзакция с всички опции
+let tx = newTransaction(
+  db = db,
+  isolationLevel = tilSerializable,    # Ниво на изолация
+  autoRetry = true,                    # Автоматичен повторен опит
+  maxRetries = 5                       # Максимален брой опити
+)
+```
+
+#### Обработка на грешки в транзакции
+
+```nim
+# Специфични типове грешки за транзакции
+try:
+  withTransaction(db):
+    # Вашите операции
+    pass
+except TransactionError as e:
+  echo "Грешка в транзакцията: ", e.msg
+except DeadlockError as e:
+  echo "Deadlock грешка: ", e.msg
+except SavepointError as e:
+  echo "Savepoint грешка: ", e.msg
 ```
 
 ### Миграции на базата данни
