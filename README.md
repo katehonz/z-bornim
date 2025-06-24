@@ -1,260 +1,298 @@
-#  ORM Library for Nim
+# Z-Bornim - Enhanced Ormin ORM for Nim
+# Z-Bornim - Подобрена Ormin ORM за Nim
+# Z-Bornim - Улучшенная Ormin ORM для Nim
 
-## Introduction
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Nim](https://img.shields.io/badge/nim-2.0+-yellow.svg)](https://nim-lang.org)
+[![GitHub](https://img.shields.io/badge/github-katehonz/z--bornim-blue.svg)](https://github.com/katehonz/z-bornim)
 
-Ormin is an ORM (Object-Relational Mapping) library for the Nim language that allows easy interaction with relational databases. The library offers a type-safe way to define models and execute queries to the database.
+**Author / Автор / Автор:** Gigov
 
-## Key Features
+## English
 
-1. **Model Definition via SQL Files**: Models are defined in SQL files and imported into Nim code.
-2. **Query DSL**: Provides a domain-specific language for queries that is close to SQL but integrated into Nim.
-3. **Multiple Database Support**: Supports SQLite, PostgreSQL, and MySQL.
-4. **Compile-Time Code Generation**: Uses Nim macros for code generation at compile time.
-5. **Type Safety**: Ensures type checking at compile time.
+### Overview
 
-## Installation
+Z-Bornim is an enhanced version of the Ormin Object-Relational Mapping (ORM) library for the Nim programming language. This fork introduces significant improvements including direct SQL schema integration, enhanced migration support, and a more developer-friendly API.
 
-```
-nimble install ormin
-```
+### Key Features
 
-## How to Use Ormin
+🚀 **SQL Schema Integration**
+- Import database schemas directly from SQL DDL files
+- Automatic conversion between SQL and Nim model definitions
+- Support for standard SQL constraints and relationships
+- Bidirectional schema conversion
 
-### Traditional Approach with SQL Files
+🔧 **Enhanced Model Definition**
+- Object-oriented model builder API
+- DSL-style model definitions
+- Automatic type mapping and validation
+- Foreign key relationship support
 
-#### Defining a Model
+📦 **Advanced Migration System**
+- Timestamp-based migration files
+- Up/down migration support
+- Automatic migration tracking
+- Schema versioning
 
-Create an SQL file with your table definitions:
+🎯 **Developer Experience**
+- Comprehensive documentation
+- Rich examples and tutorials
+- Type-safe database operations
+- Intuitive API design
 
-```sql
--- model.sql
-CREATE TABLE IF NOT EXISTS User(
-    username text PRIMARY KEY
-);
+### Quick Start
 
-CREATE TABLE IF NOT EXISTS Message(
-    username text,
-    time integer,
-    msg text NOT NULL,
-    FOREIGN KEY (username) REFERENCES User(username)
-);
-```
+#### Installation
 
-#### Importing the Model
-
-```nim
-import ormin
-importModel(DbBackend.sqlite, "model")
-```
-
-#### Executing Queries
-
-```nim
-# Creating a user
-proc create*(user: User) =
-  query:
-    insert user(username = ?user.username)
-
-# Finding a user
-proc findUser*(username: string, user: var User): bool =
-  let res = query:
-    select user(username)
-    where username == ?username
-  if res.len == 0: return false
-  else: user.username = res[0]
-  return true
+```bash
+git clone https://github.com/katehonz/z-bornim.git
+cd z-bornim
+nim install
 ```
 
-### New Approach with Model Definition in Code
-
-With the new improvements, you can define models directly in Nim code in several ways:
-
-#### 1. Using the `model` Macro
+#### Basic Usage
 
 ```nim
 import ormin/models
+import ormin/sql_schema_importer
 
-model "User":
-  username: string, primaryKey
-  email: string, notNull
-  age: int
+# Define models using SQL
+let sqlSchema = """
+CREATE TABLE User (
+  id INTEGER PRIMARY KEY,
+  username VARCHAR(50) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
 
-model "Message":
-  id: int, primaryKey
-  username: string, foreignKey("User", "username")
-  content: string, notNull
-  created_at: timestamp
-
-# Generate types for the models
-createModels()
+# Import and generate Nim models
+let importer = newSqlSchemaImporter()
+importer.importFromString(sqlSchema)
+let nimCode = importer.generateNimModels()
 ```
 
-#### 2. Object-Oriented Approach
-
-This approach allows for more flexible and programmatic model definition:
+#### Object-Oriented API
 
 ```nim
-import ormin/models
-
-# Create a user model
+# Create models using the builder pattern
 let userModel = newModelBuilder("User")
 discard userModel.column("id", dbInt).primaryKey()
 discard userModel.column("username", dbVarchar).notNull()
 discard userModel.column("email", dbVarchar).notNull()
-discard userModel.column("created_at", dbTimestamp).default("CURRENT_TIMESTAMP")
 userModel.build()
-
-# Create a message model
-let messageModel = newModelBuilder("Message")
-discard messageModel.column("id", dbInt).primaryKey()
-discard messageModel.column("user_id", dbInt).notNull().foreignKey("User", "id")
-discard messageModel.column("content", dbVarchar).notNull()
-discard messageModel.column("created_at", dbTimestamp).default("CURRENT_TIMESTAMP")
-messageModel.build()
-
-# Generate types for the models
-createModels()
 ```
 
-#### 3. DSL Approach
+### Documentation
 
-This approach offers a more declarative and readable syntax:
+- [SQL Integration Guide](docs/sql_integration_guide.md)
+- [Migration System](ormin/migrations.nim)
+- [Model Definition](ormin/models.nim)
+- [Examples](examples/)
+
+### Examples
+
+Check out the comprehensive examples in the `examples/` directory:
+- [SQL Integration Examples](examples/sql_integration/)
+- [Chat Application](examples/chat/)
+- [Forum System](examples/forum/)
+- [Twitter Clone](examples/tweeter/)
+
+---
+
+## Русский
+
+### Обзор
+
+Z-Bornim - это улучшенная версия библиотеки объектно-реляционного отображения (ORM) Ormin для языка программирования Nim. Этот форк вводит значительные улучшения, включая прямую интеграцию SQL-схем, расширенную поддержку миграций и более дружелюбный к разработчику API.
+
+### Ключевые особенности
+
+🚀 **Интеграция SQL-схем**
+- Импорт схем баз данных напрямую из SQL DDL файлов
+- Автоматическое преобразование между SQL и определениями моделей Nim
+- Поддержка стандартных SQL ограничений и связей
+- Двунаправленное преобразование схем
+
+🔧 **Улучшенное определение моделей**
+- Объектно-ориентированный API построителя моделей
+- Определения моделей в стиле DSL
+- Автоматическое сопоставление типов и валидация
+- Поддержка связей внешних ключей
+
+📦 **Продвинутая система миграций**
+- Файлы миграций на основе временных меток
+- Поддержка миграций вверх/вниз
+- Автоматическое отслеживание миграций
+- Версионирование схем
+
+🎯 **Опыт разработчика**
+- Исчерпывающая документация
+- Богатые примеры и руководства
+- Типобезопасные операции с базой данных
+- Интуитивный дизайн API
+
+### Быстрый старт
+
+#### Установка
+
+```bash
+git clone https://github.com/katehonz/z-bornim.git
+cd z-bornim
+nim install
+```
+
+#### Базовое использование
 
 ```nim
 import ormin/models
+import ormin/sql_schema_importer
 
-# Define models with DSL
-defineModel:
-  model User:
-    id {.primaryKey.}: int
-    username {.notNull.}: string
-    email {.notNull.}: string
-    created_at {.default: "CURRENT_TIMESTAMP".}: timestamp
+# Определение моделей с помощью SQL
+let sqlSchema = """
+CREATE TABLE User (
+  id INTEGER PRIMARY KEY,
+  username VARCHAR(50) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
 
-  model Message:
-    id {.primaryKey.}: int
-    user_id {.notNull, foreignKey: ("User", "id").}: int
-    content {.notNull.}: string
-    created_at {.default: "CURRENT_TIMESTAMP".}: timestamp
-
-# Generate types for the models
-createModels()
+# Импорт и генерация моделей Nim
+let importer = newSqlSchemaImporter()
+importer.importFromString(sqlSchema)
+let nimCode = importer.generateNimModels()
 ```
 
-### Using Transactions
-
-With the new transaction support, you can execute multiple queries in a single transaction:
+#### Объектно-ориентированный API
 
 ```nim
-import ormin/transactions
-
-# Using the withTransaction template
-withTransaction(db):
-  query:
-    insert user(username = ?user.username)
-  
-  query:
-    insert message(username = ?user.username, content = ?content)
-
-# Or use the shorter syntax
-transaction(db):
-  # Your queries here
-```
-
-### Database Migrations
-
-With the new migration support, you can manage changes to your database schema:
-
-```nim
-import ormin/migrations
-
-# Create a migration manager
-let mm = newMigrationManager(db)
-
-# Create a new migration
-let migrationFile = mm.createMigration("add_user_table")
-echo "Created migration: ", migrationFile
-
-# Apply all pending migrations
-mm.migrateUp()
-
-# Roll back the last migration
-mm.migrateDown(1)
-```
-
-## Advantages of Ormin
-
-1. **Performance**: Code generation at compile time can provide better performance.
-2. **Type Safety**: Nim's strong typing combined with compile-time checks.
-3. **Ease of Use**: The query DSL is very close to SQL, making it easy to learn.
-4. **SQL Integration**: Direct use of SQL files for schema definition can be convenient for developers already familiar with SQL.
-5. **Flexibility**: With the new improvements, you can choose between defining models in SQL or in code.
-
-## Improvement Suggestions
-
-The following improvements have been implemented in the latest version:
-
-1. **Migration Support**: Tools for managing changes to the database schema.
-2. **Transaction Support**: API for working with transactions.
-3. **Alternative Model Definition Approaches**: Ability to define models in Nim code in several ways:
-   - **`model` Macro**: Basic way to define models with a simple syntax.
-   - **Object-Oriented Approach**: Programmatic model definition with method chaining.
-   - **DSL Approach**: Declarative syntax using pragmas for better readability.
-
-## Detailed Description of New Model Definition Approaches
-
-### `model` Macro
-
-The simplest way to define models in Nim code:
-
-```nim
-model "User":
-  username: string, primaryKey
-  email: string, notNull
-  age: int
-```
-
-This approach is easy to use and understand but has limited flexibility.
-
-### Object-Oriented Approach
-
-This approach allows programmatic model definition and is particularly useful when models need to be created dynamically:
-
-```nim
+# Создание моделей с использованием паттерна строитель
 let userModel = newModelBuilder("User")
 discard userModel.column("id", dbInt).primaryKey()
 discard userModel.column("username", dbVarchar).notNull()
+discard userModel.column("email", dbVarchar).notNull()
 userModel.build()
 ```
 
-Advantages:
-- Programmatic model creation
-- Ability to conditionally add columns
-- Method chaining syntax for more readable code
+### Документация
 
-### DSL Approach
+- [Руководство по интеграции SQL](docs/sql_integration_guide.md)
+- [Система миграций](ormin/migrations.nim)
+- [Определение моделей](ormin/models.nim)
+- [Примеры](examples/)
 
-This approach offers the most declarative and readable syntax, using Nim pragmas:
+---
 
-```nim
-defineModel:
-  model User:
-    id {.primaryKey.}: int
-    username {.notNull.}: string
-    email {.notNull.}: string
+## Български
+
+### Преглед
+
+Z-Bornim е подобрена версия на библиотеката за обектно-релационно съпоставяне (ORM) Ormin за програмния език Nim. Този форк въвежда значителни подобрения, включително директна интеграция на SQL схеми, подобрена поддръжка на миграции и по-приятелски към разработчиците API.
+
+### Основни характеристики
+
+🚀 **SQL схема интеграция**
+- Импортиране на схеми на бази данни директно от SQL DDL файлове
+- Автоматично преобразуване между SQL и дефиниции на модели в Nim
+- Поддръжка на стандартни SQL ограничения и връзки
+- Двупосочно преобразуване на схеми
+
+🔧 **Подобрено дефиниране на модели**
+- Обектно-ориентиран API за изграждане на модели
+- Дефиниции на модели в DSL стил
+- Автоматично съпоставяне на типове и валидация
+- Поддръжка на връзки с външни ключове
+
+📦 **Разширена система за миграции**
+- Файлове за миграции базирани на времеви печати
+- Поддръжка на миграции нагоре/надолу
+- Автоматично проследяване на миграции
+- Версиониране на схеми
+
+🎯 **Опит на разработчика**
+- Изчерпателна документация
+- Богати примери и ръководства
+- Типово-безопасни операции с бази данни
+- Интуитивен дизайн на API
+
+### Бърз старт
+
+#### Инсталация
+
+```bash
+git clone https://github.com/katehonz/z-bornim.git
+cd z-bornim
+nim install
 ```
 
-Advantages:
-- Very readable syntax
-- Ability to define multiple models in one block
-- Use of pragmas for column attributes
+#### Основно използване
 
-## Planned Improvements for Future Versions
+```nim
+import ormin/models
+import ormin/sql_schema_importer
 
-1. **Improved Relationship Support**: More explicit API for working with relationships between tables in Nim code.
-2. **Improved Documentation**: Creation of more detailed documentation with usage examples.
-3. **Asynchronous Operation Support**: Adding support for asynchronous database queries.
-4. **Query Caching**: Implementation of a caching mechanism to improve performance.
-5. **Lazy Loading**: Adding support for lazy loading of related objects.
-6. **Data Validation**: Adding a mechanism for validating data before saving to the database.
-7. **Complex Query Support**: Extending the DSL to support more complex queries, such as subqueries, window functions, etc.
+# Дефиниране на модели чрез SQL
+let sqlSchema = """
+CREATE TABLE User (
+  id INTEGER PRIMARY KEY,
+  username VARCHAR(50) NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+# Импорт и генериране на Nim модели
+let importer = newSqlSchemaImporter()
+importer.importFromString(sqlSchema)
+let nimCode = importer.generateNimModels()
+```
+
+## Project Structure / Структура проекта / Структура проекта
+
+```
+z-bornim/
+├── ormin/                    # Core ORM modules / Основни ORM модули
+│   ├── models.nim           # Model definitions / Дефиниции на модели
+│   ├── sql_schema_importer.nim  # SQL integration / SQL интеграция
+│   ├── migrations.nim       # Migration system / Система за миграции
+│   ├── queries.nim          # Query builder / Конструктор на заявки
+│   └── ...
+├── examples/                # Usage examples / Примери за използване
+│   ├── sql_integration/     # SQL integration examples
+│   ├── chat/               # Chat application
+│   ├── forum/              # Forum system
+│   └── tweeter/            # Twitter clone
+├── docs/                   # Documentation / Документация
+│   └── sql_integration_guide.md
+├── tests/                  # Test suite / Тестове
+└── README.md              # This file / Този файл
+```
+
+## Contributing / Участие / Участие
+
+We welcome contributions! Please feel free to submit issues, feature requests, or pull requests.
+
+Приветстваме приноси! Моля, не се колебайте да изпращате проблеми, заявки за функции или pull request-и.
+
+Мы приветствуем вклады! Пожалуйста, не стесняйтесь отправлять проблемы, запросы функций или pull request-ы.
+
+## License / Лиценз / Лицензия
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Този проект е лицензиран под MIT лиценза - вижте файла [LICENSE](LICENSE) за подробности.
+
+Этот проект лицензирован под лицензией MIT - см. файл [LICENSE](LICENSE) для получения подробной информации.
+
+## Acknowledgments / Благодарности / Благодарности
+
+- Original Ormin library authors / Автори на оригиналната Ormin библиотека / Авторы оригинальной библиотеки Ormin
+- Nim community / Nim общност / Nim сообщество
+- All contributors / Всички участници / Все участники
+
+---
+
+**Repository:** https://github.com/katehonz/z-bornim  
+**Author:** Gigov  
+**Version:** Enhanced Ormin with SQL Integration
