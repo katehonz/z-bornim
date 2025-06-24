@@ -143,22 +143,163 @@ createModels()
 
 ### Using Transactions
 
-With the new transaction support, you can execute multiple queries in a single transaction:
+With the new comprehensive transaction support, you can execute multiple queries in a single transaction with full control and monitoring:
+
+#### Basic Transaction Usage
 
 ```nim
 import ormin/transactions
 
-# Using the withTransaction template
-withTransaction(db):
-  query:
-    insert user(username = ?user.username)
+# Method 1: Manual transaction management
+let tx = newTransaction(db)
+try:
+  tx.begin()
   
-  query:
-    insert message(username = ?user.username, content = ?content)
+  # Your database operations
+  db.exec(sql"INSERT INTO users (name, email) VALUES (?, ?)", "John", "john@example.com")
+  tx.incrementOperationCount()
+  
+  db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "1", "My Post")
+  tx.incrementOperationCount()
+  
+  tx.commit()
+  echo "Transaction committed successfully"
+except:
+  if tx.isActive():
+    tx.rollback()
+  raise
 
-# Or use the shorter syntax
+# Method 2: Using the withTransaction template (recommended)
+withTransaction(db):
+  # Your database operations
+  db.exec(sql"INSERT INTO users (name, email) VALUES (?, ?)", "Jane", "jane@example.com")
+  db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "2", "Jane's Post")
+  # Automatically commits on success or rolls back on error
+
+# Method 3: Short syntax
 transaction(db):
   # Your queries here
+```
+
+#### Transaction Isolation Levels
+
+```nim
+# Using different isolation levels
+transactionWithIsolation(db, tilSerializable):
+  # Operations with highest isolation level
+  db.exec(sql"SELECT COUNT(*) FROM users")
+
+transactionWithIsolation(db, tilReadCommitted):
+  # Operations with READ COMMITTED isolation
+  db.exec(sql"SELECT * FROM posts")
+
+# Creating a transaction with specific isolation level
+let tx = newTransaction(db, isolationLevel = tilRepeatableRead)
+```
+
+#### Nested Transactions with Savepoints
+
+```nim
+let tx = newTransaction(db)
+try:
+  tx.begin()
+  
+  # Main operations
+  db.exec(sql"INSERT INTO users (name) VALUES (?)", "Alice")
+  
+  # Create savepoint
+  tx.createSavepoint("user_created")
+  
+  try:
+    # Risky operations
+    db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "999", "Invalid")
+  except:
+    # Rollback to savepoint on error
+    tx.rollbackToSavepoint("user_created")
+    echo "Rolled back to savepoint"
+  
+  # Continue with valid operations
+  db.exec(sql"INSERT INTO posts (user_id, title) VALUES (?, ?)", "1", "Valid Post")
+  
+  # Release savepoint
+  tx.releaseSavepoint("user_created")
+  
+  tx.commit()
+except:
+  if tx.isActive():
+    tx.rollback()
+  raise
+```
+
+#### Automatic Retry on Deadlock
+
+```nim
+# Automatic retry on deadlock (up to 3 times)
+withTransactionRetry(db, 3):
+  # Operations that might cause deadlock
+  db.exec(sql"UPDATE users SET email = ? WHERE id = ?", "new@example.com", "1")
+  db.exec(sql"UPDATE posts SET title = ? WHERE user_id = ?", "New Title", "1")
+```
+
+#### Transaction Statistics and Monitoring
+
+```nim
+let tx = newTransaction(db)
+try:
+  tx.begin()
+  
+  # Perform operations
+  for i in 1..10:
+    db.exec(sql"INSERT INTO test (value) VALUES (?)", $i)
+    tx.incrementOperationCount()
+  
+  tx.commit()
+  
+  # Get statistics
+  let stats = tx.getTransactionStats()
+  echo "Operation count: ", stats.operationCount
+  echo "Duration: ", tx.getDuration()
+  echo "Rollback count: ", stats.rollbackCount
+  
+except:
+  if tx.isActive():
+    tx.rollback()
+  raise
+
+# Monitor active transactions
+let activeTx = getActiveTransactions()
+echo "Active transactions: ", activeTx.len
+
+# Cleanup inactive transactions
+cleanupInactiveTransactions()
+```
+
+#### Transaction Creation Options
+
+```nim
+# Create transaction with all options
+let tx = newTransaction(
+  db = db,
+  isolationLevel = tilSerializable,    # Isolation level
+  autoRetry = true,                    # Automatic retry
+  maxRetries = 5                       # Maximum retry attempts
+)
+```
+
+#### Transaction Error Handling
+
+```nim
+# Specific error types for transactions
+try:
+  withTransaction(db):
+    # Your operations
+    pass
+except TransactionError as e:
+  echo "Transaction error: ", e.msg
+except DeadlockError as e:
+  echo "Deadlock error: ", e.msg
+except SavepointError as e:
+  echo "Savepoint error: ", e.msg
 ```
 
 ### Database Migrations
